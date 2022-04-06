@@ -1,0 +1,9 @@
+{
+    "imageConfig": "http://",
+    "secretKey": "secret",
+    "loginExpiry": "7 days",
+    "lifeStyleResponse":{
+        "message":"thank you",
+        "amount": 5000
+    }
+}

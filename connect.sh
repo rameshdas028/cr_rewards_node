@@ -1,0 +1,1 @@
+ssh -i "AWSubuntu1.pem" ubuntu@ec2-13-127-218-220.ap-south-1.compute.amazonaws.com

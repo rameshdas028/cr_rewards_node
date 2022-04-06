@@ -1,0 +1,39 @@
+{
+  "name": "Charaka-Backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/project-charaka/Charaka-Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/project-charaka/Charaka-Backend/issues"
+  },
+  "homepage": "https://github.com/project-charaka/Charaka-Backend#readme",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.19.2",
+    "celebrate": "^15.0.1",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "crypto-js": "^4.1.1",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3",
+    "joi": "^17.6.0",
+    "jsonwebtoken": "^8.5.1",
+    "mongodb": "^4.4.1",
+    "mongoose": "^6.2.8",
+    "nodemon": "^2.0.15",
+    "pm2": "^5.2.0",
+    "razorpay": "^2.8.1",
+    "urlencode": "^1.1.0"
+  }
+}
