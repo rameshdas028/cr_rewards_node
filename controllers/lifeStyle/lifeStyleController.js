@@ -4,7 +4,7 @@ const lifeStyleModel = require("../../models/lifeStyleModel");
 const local = require("../../config/local.json");
 const TextLocalSMS = require("../../config/service/TextLocalSMS");
 const mongoose = require("../../config/db");
-// console.log(local);
+const lifestyleValidation = require("../../validation/lifeStyleValidation");
 const orderModel = require("../../models/orderModel");
 const itemModel = require("../../models/orderItemModel");
 var CryptoJS = require("crypto-js");
@@ -14,29 +14,18 @@ const instance = new Razorpay({
     key_secret: process.env.key_secret 
 });
 
-module.exports.addLifeStyleUserValidator = (req, res, next) => {
-    const bodyValidation = Joi.object().keys({
-        name: Joi.string().required(),
-        mobile: Joi.number().integer().min(1000000000).max(9999999999).required(),
-        email: Joi.string().email().required()
-    }).unknown(false)
-    
-    const bodyValues = bodyValidation.validate(req.body);
 
-    if (bodyValues.error) {
-        // throw new Error(bodyValues.error.details[0].message);
-        // return catched(bodyValues.error); 
-        return res.status(400).json({
-            status: 400,
-            message: "validation error",
-        });
-    };
-    return next();
-};
 
 exports.createLifeStyleUser = async(req, res) => {
     try {
         let {body: payload} = req;
+        let { error } = await lifestyleValidation.addLifeStyleUserValidator(payload);
+        if(error){
+            return res.send({
+                status: 400,
+                message: error.details[0].message
+            })
+        }
         let lifestyle = {
             name: payload.name,
             mobile: payload.mobile,
@@ -93,31 +82,20 @@ exports.giveMessage = async(req,res) => {
     }
 }
 
-module.exports.lifeStyleOrderValidator = (req, res, next) => {
-    const bodyValidation = Joi.object().keys({
-        processId: Joi.string().required(),
-        items: Joi.array().items({
-            amount: Joi.number().required(),
-            quantity: Joi.number().required()
-        })
-    }).unknown(false)
-    
-    const bodyValues = bodyValidation.validate(req.body);
 
-    if (bodyValues.error) {
-        return res.status(400).json({
-            status: 400,
-            message: bodyValues.error.details
-        });
-    };
-    return next();
-};
 
 exports.lifeStyleOrder = async(req,res) => {
     try {
         let {body: payload} = req;
-        let total = 0;
-        let ids = [];
+
+        let { error } = await lifestyleValidation.lifeStyleOrderValidator(payload);
+        console.log(error);
+        if(error){
+            return res.send({
+                status: 400,
+                message: error.details[0].message
+            })
+        }
         let lifestyleUser = await lifeStyleModel.findOne({_id: payload.processId});
         if(!lifestyleUser){
             return res.send({
@@ -125,17 +103,31 @@ exports.lifeStyleOrder = async(req,res) => {
                 message: "processId invalid"
             })   
         }
+
+        let total = 0;
+        let ids = [];
+        let arrayOfObject = [];
         for(let i of payload.items){
-            let data = new itemModel({
+            let data = {
+                _id : mongoose.Types.ObjectId(),
                processId: payload.processId,
                amount: i.amount,
                quantity: i.quantity
-            })
-            let saveItem =  await data.save();
+            };
             total += (i.amount * i.quantity) * 100;
-            ids.push(saveItem._id);
+            ids.push(data._id);
+            arrayOfObject.push(data);
         }
   
+        if((total/100) > 100000){
+            return res.send({
+                status:401,
+                message: " You can perches maximum 100000 at a time "
+            }) 
+        }
+        
+        let items = await itemModel.create(arrayOfObject);
+    
         let discount = (total - (total * (10/100))) * 100;
 
         let ax = await instance.orders.create({
@@ -148,6 +140,7 @@ exports.lifeStyleOrder = async(req,res) => {
         .digest('hex');
 
         let dataForOrderItem = {
+            _id: mongoose.Types.ObjectId(),
             orderId: ax.id,
             processId:payload.processId,
             orderItem : ids,
@@ -157,6 +150,7 @@ exports.lifeStyleOrder = async(req,res) => {
         }
 
         let saveData = await orderModel.create(dataForOrderItem);
+   
         res.send({
             status:200,
             orderId: saveData.orderId,
