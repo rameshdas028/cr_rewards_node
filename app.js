@@ -16,6 +16,22 @@ const PORT = process.env.PORT || 8088;
 app.options('*', cors());
 app.use(cors());
 app.use('/api',route);
+
+
+var multer = require('multer')
+var storage = multer.diskStorage({
+    destination: (req, file, callBack) => {
+        callBack(null, './')    
+    },
+    filename: (req, file, callBack) => {
+        callBack(null, file.originalname)
+    }
+})
+ 
+var upload = multer({
+    storage: storage
+});
+
 // Middleware to fix the html error thrown when json format is wrong
 app.use(
     /**
@@ -62,6 +78,18 @@ app.use(
         next();
     }
 );
+
+app.post("/api/upload", upload.single("files"),(req,res) =>{
+    try {
+        let json = JSON.stringify(req.files);
+        return res.send({
+            status:200,
+            message: "success fully upload",
+        });
+    } catch (error) {
+        console.log(error);
+    }
+});
 
 app.listen(PORT);
 console.log('RESTful API server started on : ' + PORT);
