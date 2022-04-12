@@ -8,6 +8,8 @@ const mongoose = require("../../config/db");
 const lifestyleValidation = require("../../validation/lifeStyleValidation");
 const orderModel = require("../../models/orderModel");
 const itemModel = require("../../models/orderItemModel");
+const voucherModel = require("../../models/voucherModel");
+
 var CryptoJS = require("crypto-js");
 var crypto = require("crypto");
 const instance = new Razorpay({ 
@@ -90,7 +92,6 @@ exports.lifeStyleOrder = async(req,res) => {
         let {body: payload} = req;
 
         let { error } = await lifestyleValidation.lifeStyleOrderValidator(payload);
-        console.log(error);
         if(error){
             return res.send({
                 status: 400,
@@ -120,13 +121,13 @@ exports.lifeStyleOrder = async(req,res) => {
             arrayOfObject.push(data);
         }
   
-        if((total/100) > 100000){
+        if(total >= 1000000){
             return res.send({
                 status:401,
-                message: " You can perches maximum 100000 at a time "
+                message: " You can perches maximum 10000 at a time "
             }) 
         }
-        
+  
         let items = await itemModel.create(arrayOfObject);
     
         let discount = (total - (total * (10/100))) * 100;
@@ -136,9 +137,9 @@ exports.lifeStyleOrder = async(req,res) => {
             currency: "INR",
         })
 
-        let signature = crypto.createHmac('sha256', process.env.key_secret)
-        .update((ax.id).toString())
-        .digest('hex');
+        // let signature = crypto.createHmac('sha256', process.env.key_secret)
+        // .update((ax.id).toString())
+        // .digest('hex');
 
         let dataForOrderItem = {
             _id: mongoose.Types.ObjectId(),
@@ -151,7 +152,7 @@ exports.lifeStyleOrder = async(req,res) => {
         }
 
         let saveData = await orderModel.create(dataForOrderItem);
-   
+        
         res.send({
             status:200,
             orderId: saveData.orderId,
@@ -168,9 +169,7 @@ exports.lifeStyleOrder = async(req,res) => {
 
 exports.paymentVerify = async(req,res) => {
     try {
-        // let {body: payload} = req;
         let order_id = req.params.id;
-
         let order = await orderModel.findOne({orderId: order_id});
         if(!order){
             return res.send({
@@ -178,8 +177,40 @@ exports.paymentVerify = async(req,res) => {
                 message: "invalid"
             })
         }
+        let getQuantity = await itemModel.find({processId:order.processId});
+        let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
+        let countVoucherOf1000 = await voucherModel.find({amount:1000,status:"no"}).count();
+        let countVoucherOf2000 = await voucherModel.find({amount:2000,status:"no"}).count();
+  
+        let dataOfVoucher = [];
+        if(checkTotalVoucherLeft > 0){
+          if(countVoucherOf1000 > 0){
+            if(countVoucherOf2000 > 0){
+              for(let i of getQuantity){
+                let getVoucher = await voucherModel.find({amount:i.amount, status: "no"}).limit(i.quantity);
+                for(let j of getVoucher){
+                  let data = {
+                    pin: j.pin,
+                    amount: j.amount,
+                    expire: j.expire
+                  }
+                  // await voucherModel.findByIdAndUpdate({_id:j._id},{status:"used"});
+                  dataOfVoucher.push(data);
+                }
+              }
+            }else{
+              console.log("not");
+            }
+          }else{
+            console.log("not");
+          }
+        }else{
+          console.log("not");
+        }
+        console.log(dataOfVoucher);
+        // let getVoucher = await voucherModel.find();
 
-        let getOrder = await instance.orders.fetch(order_id)
+        // let getOrder = await instance.orders.fetch(order_id)
         // console.log();
         // await orderModel.findByIdAndUpdate({_id:order_id},{status:getOrder.status},{upsert: true});
         // var expectedSignature = crypto.createHmac('sha256', process.env.key_secret)
@@ -191,7 +222,7 @@ exports.paymentVerify = async(req,res) => {
 
         //     response={"status": 200, message:"success"}
                 
-        return res.send(getOrder);
+        return res.send(getQuantity);
     } catch (error) {
         console.log(error);
         return res.status(500).json({
@@ -244,27 +275,58 @@ exports.sendText = async(req,res) => {
 3. when getting item request check if cupon available if yes then status used then processed to payment and after payment confirm make the cupon as used and send cupon to the user.with invoice.
 4. if not available then send invice after payment send notification to admin mark order status as pending .
 */
-var multer = require('multer')
-var storage = multer.diskStorage({
-    destination: (req, file, callBack) => {
-        callBack(null, './')    
-    },
-    filename: (req, file, callBack) => {
-        callBack(null, file.originalname)
-    }
-})
- 
-var upload = multer({
-    storage: storage
-});
+
 
 const reader = require('xlsx');
-const csv = require('csv-parser')
-const fs = require('fs')
-const fileupload = require('express-fileupload');
+const helper = require('../../helpers/helper');
 exports.sendEmail = async(req,res) =>{
     try {
-        let results = [];
+      let readfile = reader.readFile("./FORMAT.xls")
+      let sheet = readfile.SheetNames;
+      let sheetData;
+      for(let i = 0; i< sheet.length; i++){
+        const sheetnams = sheet[i];
+        sheetData = reader.utils.sheet_to_json(readfile.Sheets[sheetnams]);
+      }
+
+      let data = [];
+      for(let i = 0; i< sheetData.length; i++){
+          let customerData = {
+            name: sheetData[i].EmployeeName,
+            amount: sheetData[i].value,
+            number: sheetData[i].Code,
+            pin: sheetData[i].Pin,
+            expiry: sheetData[i].validity
+          }
+          let temp = await helper.sendEmailToCustomerTemplate(customerData);
+
+          let obj = {
+              to: sheetData[i].EmailIdOfficial, // replace this with your email address
+              bcc:"Poorvi@credencerewards.com",
+              from: "webmaster@credencerewards.com",
+              subject: 'credencerewards cupon',
+              html: temp,
+          }
+          data.push(obj)
+      }
+ 
+      let sendDone = await emailService.sendEmail(data);
+
+      return res.send({
+          status : 200,
+          message: "sent successfully",
+      })
+
+    } catch (error) {
+      res.send({
+        status: 500,
+        message:error
+      })
+    }
+}
+
+/* 
+  let results = [];
         let email = [];
         let dataObj = {};
         fs.createReadStream('new.csv')
@@ -291,36 +353,12 @@ exports.sendEmail = async(req,res) =>{
                 // html: msg // message-> HTML message format can be send...
             };
 
-            let sendDone = await emailService.sendEmail(data);
-            return res.send({
-                status : 200,
-                message: "done",
-                data: sendDone
-            })
-        });
-    } catch (error) {
-        console.log(error);
-    }
-}
 
+        });
+*/
 /* 
 
-        let data = [
-            {
-                to: 'csahoo776@gmail.com', // replace this with your email address
-                from: "noreply@credencerewards.com",
-                subject: 'We miss you 😭',
-                text: 'Get 10% off with coupon code NOMNOMNOM',
-                html: '<p>Get 10% off with coupon code <b>NOMNOMNOM</b></p>',
-              },
-              {
-                to: 'chandan19@navgurukul.org', // replace this with your email address
-                from: "noreply@credencerewards.com",
-                subject: 'NEW! Ube rolls 😻',
-                text: 'In addition to donuts, we are now selling ube rolls.',
-                html: '<p>In addition to donuts, we are now selling ube rolls.</p>',
-              },
-        ]
+
 const message = {
   personalizations: [
     {

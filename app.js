@@ -79,9 +79,13 @@ app.use(
     }
 );
 
+// 
+const csv = require('csv-parser')
+const fs = require('fs')
+const voucherModel = require("./models/voucherModel");
+
 app.post("/api/upload", upload.single("files"),(req,res) =>{
     try {
-        let json = JSON.stringify(req.files);
         return res.send({
             status:200,
             message: "success fully upload",
