@@ -3,16 +3,20 @@ const mongoose = require("../config/db");
 const Schema = mongoose.Schema;
 
 const schema = new mongoose.Schema({
-    pin: {
+    voucherAmount:{
+        type: Number,
+        required: true,
+    },
+    voucherCode:{
+        type: String,
+        required: true,
+    },
+    pin:{
         type: String,
         required: true,
         unique:true
     },
-    amount:{
-        type: Number,
-        required: true,
-    },
-	expire: {
+	expireDate: {
         type: String,
         required: true,
     },

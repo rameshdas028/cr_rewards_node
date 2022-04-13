@@ -11,6 +11,7 @@ const orderModel = require("../../models/orderModel");
 const itemModel = require("../../models/orderItemModel");
 const voucherModel = require("../../models/voucherModel");
 const voucher_history = require("../../models/vooucherHistory");
+const invoiceMailTemplate = require("../../helpers/peronalMail");
 var CryptoJS = require("crypto-js");
 var crypto = require("crypto");
 const instance = new Razorpay({ 
@@ -132,7 +133,7 @@ exports.lifeStyleOrder = async(req,res) => {
         let items = await itemModel.create(arrayOfObject);
     
         let discount = (total - (total * (10/100))) * 100;
-
+      
         let ax = await instance.orders.create({
             amount: discount,
             currency: "INR",
@@ -158,7 +159,7 @@ exports.lifeStyleOrder = async(req,res) => {
         console.log(error);
         return res.status(500).json({
             status: 500,
-            message: "Internal Server Error",
+            message:  error || "Internal Server Error",
         });   
     }
 }
@@ -175,16 +176,17 @@ exports.paymentVerify = async(req,res) => {
         }
   
         let getUser = await lifeStyleModel.findOne({_id:order.processId});
-        let getQuantity = await itemModel.find({processId:order.processId});
-
-        let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
-        let countVoucherOf1000 = await voucherModel.find({amount:1000,status:"no"}).count();
-        let countVoucherOf2000 = await voucherModel.find({amount:2000,status:"no"}).count();
+        let getQuantity = await itemModel.find({processId:order.processId, status: "No"});
   
-        let dataOfVoucher = [];
-        let collectionOfUser = [];
-        if(checkTotalVoucherLeft > 0){
-          let obj = {
+        let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
+          // console.log(checkTotalVoucherLeft);
+        let countVoucherOf1000 = await voucherModel.find({voucherAmount:1000,status:"no"}).count();
+          // console.log(countVoucherOf1000);
+        // let countVoucherOf2000 = await voucherModel.find({voucherAmount:2000,status:"no"}).count();
+  
+        let obj = {};
+        if(checkTotalVoucherLeft <= 1){
+          obj = {
             to: "chandan19@navgurukul.org", // replace this with your email address
             // bcc:"Poorvi@credencerewards.com",
             from: "webmaster@credencerewards.com",
@@ -196,64 +198,97 @@ exports.paymentVerify = async(req,res) => {
           console.log("email sent");
         }
 
-        else if(countVoucherOf1000 <= 0){
-          let obj = {
+        else if(countVoucherOf1000 <= 1){
+          obj = {
             to: "chandan19@navgurukul.org", // replace this with your email address
             // bcc:"Poorvi@credencerewards.com",
             from: "webmaster@credencerewards.com",
-            msg: `1000 ${countVoucherOf1000} vocher is left !`,
+            msg: ` ${countVoucherOf1000} vocher is left 1000!`,
             subject: 'credencerewards cupon',
             html:`<p><p>`
           }
           await mailGunService.sendEmail(obj);
-        }
+        }           
 
-        else if(countVoucherOf2000 <= 0){
-          let obj = {
-            to: "chandan19@navgurukul.org", // replace this with your email address
-            // bcc:"Poorvi@credencerewards.com",
-            from: "webmaster@credencerewards.com",
-            msg: `2000 ${countVoucherOf2000} vocher is left !`,
-            subject: 'credencerewards cupon',
-            html:`<p><p>`
-          }
-          await mailGunService.sendEmail(obj);
-        }
-
-  
-        // console.log(dataOfVoucher);
-        // let getVoucher = await voucherModel.find();
-
-        // let getOrder = await instance.orders.fetch(order_id)
-        // console.log();
-        // await orderModel.findByIdAndUpdate({_id:order_id},{status:getOrder.status},{upsert: true});
-        // var expectedSignature = crypto.createHmac('sha256', process.env.key_secret)
-        //                                 .update(payload.order_id.toString())
-        //                                 .digest('hex');
-
-        // let response = {"status": 401, message:"faild"};
-        // if(expectedSignature === order.signature)
-
-        //     response={"status": 200, message:"success"}
-                
-      
+      let dataOfVoucher = [];
+      let collectionOfUser = [];
+      let makObj2 = {
+        name: getUser.name
+      };
+      let makObj = {
+          name: getUser.name
+      }
+      let messageObj = {
+        mobile: getUser.mobile
+      }
         for(let i of getQuantity){
-          let getVoucher = await voucherModel.find({amount:i.amount, status: "no"}).limit(i.quantity);
-          if(i.quantity === getVoucher.length){
+          let getVoucher = await voucherModel.find({voucherAmount:i.amount, status: "no"}).limit(i.quantity);
+          if(getVoucher > 0 && i.quantity === getVoucher.length){
             for(let j of getVoucher){
               let data = {
+                amount: j.voucherAmount,
+                code: j.voucherCode,
                 pin: j.pin,
-                amount: j.amount,
-                expire: j.expire
+                expire: j.expireDate
               }
-              // await voucherModel.findByIdAndUpdate({_id:j._id},{status:"used"});
+              await voucherModel.findByIdAndUpdate({_id:j._id},{status:"used"});
               dataOfVoucher.push(data);
             }
           }
           collectionOfUser.push(i);
         }
-        await voucher_history.create(collectionOfUser);
-        return res.send(dataOfVoucher);
+        makObj.details = dataOfVoucher
+        messageObj.details = dataOfVoucher;
+        makObj2.details = collectionOfUser;
+        let checkTotalSent = await voucherModel.find({status:"used"}).count()
+        let total =  checkTotalVoucherLeft - checkTotalSent;
+        if(makObj.details.length >= 1){
+          let html = await invoiceMailTemplate.sendEmailToCustomer(makObj);
+    
+          obj = {
+            to: getUser.email, // replace this with your email address
+            bcc:"chandan19@navgurukul.org",
+            from: "webmaster@credencerewards.com",
+            msg: ` vaoucher`,
+            subject: 'credencerewards voucher',
+            html: html
+          }
+          await mailGunService.sendEmail(obj);
+         
+          obj = {
+            to: getUser.email, // replace this with your email address
+            bcc: "chandan19@navgurukul.org",
+            from: "webmaster@credencerewards.com",
+            msg: ` Total voucher sent ${total}`,
+            subject: 'credencerewards voucher',
+            html: `<p>Total voucher used ${total} <p>`
+          }
+          await mailGunService.sendEmail(obj);
+          await this.sendText(messageObj);
+          await itemModel.findOneAndUpdate({processId:order.processId, status: "No"},{
+              status: "Yes"
+          });
+        }else{
+          await voucher_history.create(makObj2);
+          let needVoucher = collectionOfUser.length;
+          obj = {
+            to: getUser.email, // replace this with your email address
+            bcc: "chandan19@navgurukul.org",
+            from: "webmaster@credencerewards.com",
+            msg: ` voucher need to send ${needVoucher}`,
+            subject: 'credencerewards voucher',
+            html: `<p>Total voucher used ${total} <p>`
+          }
+          await mailGunService.sendEmail(obj);
+          await itemModel.findOneAndUpdate({processId:order.processId, status: "No"},{
+            status: "Pending"
+          });
+        }
+
+        return res.send({
+          status: 200,
+          message: "successfull"
+        });
     } catch (error) {
         console.log(error);
         return res.status(500).json({
@@ -263,44 +298,35 @@ exports.paymentVerify = async(req,res) => {
     }
 }
 
-exports.sendText = async(req,res) => {
+exports.sendText = async(data) => {
     try {
-        // let msg = `Hello, This is not a plain-text email</a>`
-        // var data = {
-        //     from: "noreply@credencerewards.com",
-        //     to: ["chandan19@navgurukul.org","csahoo776@gmail.com","loksudanbaidya01@gmail.com"],// where you sending...
-        //     bcc: "loksudan@jobspri.com",
-        //     subject: "hi, testing email", // subject...
-        //     html: msg // message-> HTML message format can be send...
-        // };
-        // let sendDone = await emailService.sendEmail(data);
-        // return res.send({
-        //     status : 200,
-        //     message: "done",
-        //     data: sendDone
-        // })
-        let data = {
+      let msg;
+      for(let i of data.details){
+          msg = ` This is your Lifestyle voucher of value INR Amount  ${i.amount}  Voucher Code  ${i.code}  Voucher pin  ${i.pin} Expire Date  ${i.expire}`
+          let obj = {
             countryCode: '+91',
-            mobileNumber: '7586022804',
-            msg: "hi"
-        }
-        messageService.sendOtpSMSCallback( data, async (resdata) => {
+            mobileNumber: `${data.mobile}`,
+            msg: msg
+          }
+          messageService.sendOtpSMSCallback(obj, async (resdata) => {
             console.log(resdata);
-            // if (err) {
-            //     console.log();
-            //     // return res.json(helper.showTwillioErrorResponse(err.message));
-            // }
-        })
+          })
+      }
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({
             status: 500,
-            message: "Internal Server Error",
+            message: error.message || "Internal Server Error",
         });    
     }
 }
 
 /* 
+accountSid = "SK1748db093636200a2b84a3e3af6cff46"
+authToken = "koyVx6xovM0RJtfKbEnIrHv7DP1dOsoY"
+accountSid = "ACbb120ff004658fa724f81de4d364081f"
+authToken = "177daf3ec941f4cf665b5fd3a0e73c75"
 1. upload cupon using excel
 2. save cupon into data base
 3. when getting item request check if cupon available if yes then status used then processed to payment and after payment confirm make the cupon as used and send cupon to the user.with invoice.
@@ -310,6 +336,7 @@ exports.sendText = async(req,res) => {
 
 const reader = require('xlsx');
 const helper = require('../../helpers/helper');
+const { json } = require("body-parser");
 exports.sendEmail = async(req,res) =>{
     try {
       let readfile = reader.readFile("./FORMAT.xls")
@@ -400,3 +427,22 @@ exports.sendEmailWithMailGun = async(req,res) =>{
     })
   }
 }
+
+
+/*
+
+        // console.log(dataOfVoucher);
+        // let getVoucher = await voucherModel.find();
+
+        // let getOrder = await instance.orders.fetch(order_id)
+        // console.log();
+        // await orderModel.findByIdAndUpdate({_id:order_id},{status:getOrder.status},{upsert: true});
+        // var expectedSignature = crypto.createHmac('sha256', process.env.key_secret)
+        //                                 .update(payload.order_id.toString())
+        //                                 .digest('hex');
+
+        // let response = {"status": 401, message:"faild"};
+        // if(expectedSignature === order.signature)
+
+        //     response={"status": 200, message:"success"}
+*/
