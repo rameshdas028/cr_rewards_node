@@ -2,14 +2,15 @@ const { celebrate, Joi } = require("celebrate");
 const Razorpay = require('razorpay');
 const lifeStyleModel = require("../../models/lifeStyleModel");
 const local = require("../../config/local.json");
-const emailService = require("../../config/service/emailService");
+const emailService = require("../../config/service/emailServiceSendGrid");
+const mailGunService = require("../../config/service/emailServiceMailGun");
 const messageService = require("../../config/service/TextLocalSMS");
 const mongoose = require("../../config/db");
 const lifestyleValidation = require("../../validation/lifeStyleValidation");
 const orderModel = require("../../models/orderModel");
 const itemModel = require("../../models/orderItemModel");
 const voucherModel = require("../../models/voucherModel");
-
+const voucher_history = require("../../models/vooucherHistory");
 var CryptoJS = require("crypto-js");
 var crypto = require("crypto");
 const instance = new Razorpay({ 
@@ -120,14 +121,14 @@ exports.lifeStyleOrder = async(req,res) => {
             ids.push(data._id);
             arrayOfObject.push(data);
         }
-  
+        
         if(total >= 1000000){
-            return res.send({
-                status:401,
-                message: " You can perches maximum 10000 at a time "
-            }) 
+          return res.send({
+              status:401,
+              message: " You can perches maximum 10000 at a time "
+          }) 
         }
-  
+
         let items = await itemModel.create(arrayOfObject);
     
         let discount = (total - (total * (10/100))) * 100;
@@ -137,22 +138,17 @@ exports.lifeStyleOrder = async(req,res) => {
             currency: "INR",
         })
 
-        // let signature = crypto.createHmac('sha256', process.env.key_secret)
-        // .update((ax.id).toString())
-        // .digest('hex');
-
         let dataForOrderItem = {
             _id: mongoose.Types.ObjectId(),
             orderId: ax.id,
             processId:payload.processId,
             orderItem : ids,
             discount: discount,
-            status: ax.status,
-            signature: signature
+            status: ax.status
         }
 
         let saveData = await orderModel.create(dataForOrderItem);
-        
+      
         res.send({
             status:200,
             orderId: saveData.orderId,
@@ -177,37 +173,55 @@ exports.paymentVerify = async(req,res) => {
                 message: "invalid"
             })
         }
+  
+        let getUser = await lifeStyleModel.findOne({_id:order.processId});
         let getQuantity = await itemModel.find({processId:order.processId});
+
         let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
         let countVoucherOf1000 = await voucherModel.find({amount:1000,status:"no"}).count();
         let countVoucherOf2000 = await voucherModel.find({amount:2000,status:"no"}).count();
   
         let dataOfVoucher = [];
+        let collectionOfUser = [];
         if(checkTotalVoucherLeft > 0){
-          if(countVoucherOf1000 > 0){
-            if(countVoucherOf2000 > 0){
-              for(let i of getQuantity){
-                let getVoucher = await voucherModel.find({amount:i.amount, status: "no"}).limit(i.quantity);
-                for(let j of getVoucher){
-                  let data = {
-                    pin: j.pin,
-                    amount: j.amount,
-                    expire: j.expire
-                  }
-                  // await voucherModel.findByIdAndUpdate({_id:j._id},{status:"used"});
-                  dataOfVoucher.push(data);
-                }
-              }
-            }else{
-              console.log("not");
-            }
-          }else{
-            console.log("not");
+          let obj = {
+            to: "chandan19@navgurukul.org", // replace this with your email address
+            // bcc:"Poorvi@credencerewards.com",
+            from: "webmaster@credencerewards.com",
+            msg: `${checkTotalVoucherLeft} voucher is left !`,
+            subject: 'credencerewards cupon',
+            html:`<p><p>`
           }
-        }else{
-          console.log("not");
+          await mailGunService.sendEmail(obj);
+          console.log("email sent");
         }
-        console.log(dataOfVoucher);
+
+        else if(countVoucherOf1000 <= 0){
+          let obj = {
+            to: "chandan19@navgurukul.org", // replace this with your email address
+            // bcc:"Poorvi@credencerewards.com",
+            from: "webmaster@credencerewards.com",
+            msg: `1000 ${countVoucherOf1000} vocher is left !`,
+            subject: 'credencerewards cupon',
+            html:`<p><p>`
+          }
+          await mailGunService.sendEmail(obj);
+        }
+
+        else if(countVoucherOf2000 <= 0){
+          let obj = {
+            to: "chandan19@navgurukul.org", // replace this with your email address
+            // bcc:"Poorvi@credencerewards.com",
+            from: "webmaster@credencerewards.com",
+            msg: `2000 ${countVoucherOf2000} vocher is left !`,
+            subject: 'credencerewards cupon',
+            html:`<p><p>`
+          }
+          await mailGunService.sendEmail(obj);
+        }
+
+  
+        // console.log(dataOfVoucher);
         // let getVoucher = await voucherModel.find();
 
         // let getOrder = await instance.orders.fetch(order_id)
@@ -222,7 +236,24 @@ exports.paymentVerify = async(req,res) => {
 
         //     response={"status": 200, message:"success"}
                 
-        return res.send(getQuantity);
+      
+        for(let i of getQuantity){
+          let getVoucher = await voucherModel.find({amount:i.amount, status: "no"}).limit(i.quantity);
+          if(i.quantity === getVoucher.length){
+            for(let j of getVoucher){
+              let data = {
+                pin: j.pin,
+                amount: j.amount,
+                expire: j.expire
+              }
+              // await voucherModel.findByIdAndUpdate({_id:j._id},{status:"used"});
+              dataOfVoucher.push(data);
+            }
+          }
+          collectionOfUser.push(i);
+        }
+        await voucher_history.create(collectionOfUser);
+        return res.send(dataOfVoucher);
     } catch (error) {
         console.log(error);
         return res.status(500).json({
@@ -325,144 +356,47 @@ exports.sendEmail = async(req,res) =>{
     }
 }
 
-/* 
-  let results = [];
-        let email = [];
-        let dataObj = {};
-        fs.createReadStream('new.csv')
-        .pipe(csv())
-        .on('data', async(data) => results.push(data))
-        .on('end', async() => {
-            for(let i of results){
-                email.push(i.email)
-                let obj = {
-                    subject:i.subject,
-                    name:i.name
-                }
-                dataObj[i.email] = obj;
-            }
-            console.log(email);
-            console.log(dataObj);
-            var data = {
-                from: "noreply@credencerewards.com",
-                to: email,// where you sending...
-                // bcc: "loksudan@jobspri.com",
-                subject: '%recipient.subject%', // subject...
-                html: 'Hey,recipient.name',
-                'recipient-variables': dataObj,
-                // html: msg // message-> HTML message format can be send...
-            };
 
+exports.sendEmailWithMailGun = async(req,res) =>{
+  try {
+    let readfile = reader.readFile("./FORMAT.xls")
+    let sheet = readfile.SheetNames;
+    let sheetData;
+    for(let i = 0; i< sheet.length; i++){
+      const sheetnams = sheet[i];
+      sheetData = reader.utils.sheet_to_json(readfile.Sheets[sheetnams]);
+    }
 
-        });
-*/
-/* 
+    let data = [];
+    for(let i = 0; i< sheetData.length; i++){
+      // console.log(sheetData[i]);
+        let customerData = {
+          name: sheetData[i].EmployeeName,
+          amount: sheetData[i].value,
+          number: sheetData[i].Code,
+          pin: sheetData[i].Pin,
+          expiry: sheetData[i].validity
+        }
+        let temp = await helper.sendEmailToCustomerTemplate(customerData);
 
+        let obj = {
+            to: [sheetData[i].EmailIdOfficial,sheetData[i].EmailIdPersonal], // replace this with your email address
+            bcc:"poorvi@credencerewards.com",
+            from: "webmaster@credencerewards.com",
+            subject: 'credencerewards coupon',
+            html: temp,
+        }
+        let sendDone = await mailGunService.sendEmail(obj);
+    }
+    return res.send({
+        status : 200,
+        message: "sent successfully",
+    })
 
-const message = {
-  personalizations: [
-    {
-      to: [
-        {
-          email: 'john_doe@example.com',
-          name: 'John Doe'
-        },
-        {
-          email: 'julia_doe@example.com',
-          name: 'Julia Doe'
-        }
-      ],
-      cc: [
-        {
-          email: 'jane_doe@example.com',
-          name: 'Jane Doe'
-        }
-      ],
-      bcc: [
-        {
-          email: 'james_doe@example.com',
-          name: 'Jim Doe'
-        }
-      ]
-    },
-    {
-      from: {
-        email: 'sales@example.com',
-        name: 'Example Sales Team'
-      },
-      to: [
-        {
-          email: 'janice_doe@example.com',
-          name: 'Janice Doe'
-        }
-      ],
-      bcc: [
-        {
-          email: 'jordan_doe@example.com',
-          name: 'Jordan Doe'
-        }
-      ]
-    }
-  ],
-  from: {
-    email: 'orders@example.com',
-    name: 'Example Order Confirmation'
-  },
-  replyTo: {
-    email: 'customer_service@example.com',
-    name: 'Example Customer Service Team'
-  },
-  subject: 'Your Example Order Confirmation',
-  content: [
-    {
-      type: 'text/html',
-      value: '<p>Hello from Twilio SendGrid!</p><p>Sending with the email service trusted by developers and marketers for <strong>time-savings</strong>, <strong>scalability</strong>, and <strong>delivery expertise</strong>.</p><p>%open-track%</p>'
-    }
-  ],
-  attachments: [
-    {
-      content: 'PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KCiAgICA8aGVhZD4KICAgICAgICA8bWV0YSBjaGFyc2V0PSJVVEYtOCI+CiAgICAgICAgPG1ldGEgaHR0cC1lcXVpdj0iWC1VQS1Db21wYXRpYmxlIiBjb250ZW50PSJJRT1lZGdlIj4KICAgICAgICA8bWV0YSBuYW1lPSJ2aWV3cG9ydCIgY29udGVudD0id2lkdGg9ZGV2aWNlLXdpZHRoLCBpbml0aWFsLXNjYWxlPTEuMCI+CiAgICAgICAgPHRpdGxlPkRvY3VtZW50PC90aXRsZT4KICAgIDwvaGVhZD4KCiAgICA8Ym9keT4KCiAgICA8L2JvZHk+Cgo8L2h0bWw+Cg==',
-      filename: 'index.html',
-      type: 'text/html',
-      disposition: 'attachment'
-    }
-  ],
-  categories: [
-    'cake',
-    'pie',
-    'baking'
-  ],
-  sendAt: 1617260400,
-  batchId: 'AsdFgHjklQweRTYuIopzXcVBNm0aSDfGHjklmZcVbNMqWert1znmOP2asDFjkl',
-  asm: {
-    groupId: 12345,
-    groupsToDisplay: [
-      12345
-    ]
-  },
-  ipPoolName: 'transactional email',
-  mailSettings: {
-    bypassListManagement: {
-      enable: false
-    },
-    footer: {
-      enable: false
-    },
-    sandboxMode: {
-      enable: false
-    }
-  },
-  trackingSettings: {
-    clickTracking: {
-      enable: true,
-      enableText: false
-    },
-    openTracking: {
-      enable: true,
-      substitutionTag: '%open-track%'
-    },
-    subscriptionTracking: {
-      enable: false
-    }
+  } catch (error) {
+    res.send({
+      status: 500,
+      message:error
+    })
   }
-}; */
+}

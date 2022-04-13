@@ -83,9 +83,34 @@ app.use(
 const csv = require('csv-parser')
 const fs = require('fs')
 const voucherModel = require("./models/voucherModel");
-
+/*
 app.post("/api/upload", upload.single("files"),(req,res) =>{
     try {
+        return res.send({
+            status:200,
+            message: "success fully upload",
+        });
+    } catch (error) {
+        console.log(error);
+    }
+});
+*/
+const reader = require('xlsx'); //upload.single("files"),
+app.post("/api/upload_voucher", async(req,res) =>{
+    try {
+        let readfile = reader.readFile("./FORMAT.xls")
+        let sheet = readfile.SheetNames;
+
+        let sheetData;
+        for(let i = 0; i< sheet.length; i++){
+          const sheetnams = sheet[i];
+          sheetData = reader.utils.sheet_to_json(readfile.Sheets[sheetnams]);
+        }
+        // for(let i = 0; i< sheetData.length; i++){
+        //     console.log(sheetData[i]);
+        // }
+        // // console.log(sheetData);
+        await voucherModel.create(sheetData);
         return res.send({
             status:200,
             message: "success fully upload",

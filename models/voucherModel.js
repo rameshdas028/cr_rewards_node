@@ -8,12 +8,12 @@ const schema = new mongoose.Schema({
         required: true,
         unique:true
     },
-	expire: {
-        type: Date,
-        required: true,
-    },
     amount:{
         type: Number,
+        required: true,
+    },
+	expire: {
+        type: String,
         required: true,
     },
     status:{
