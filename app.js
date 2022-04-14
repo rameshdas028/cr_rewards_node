@@ -1,15 +1,27 @@
 const dotenv = require("dotenv");
+const express = require("express");
+const https = require('https');
+const path = require('path'); 
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const express = require("express");
+const rateLimit = require('express-rate-limit')
 const fs = require('fs');
 dotenv.config();
 const route = require("./routes/indexRoute");
 const db = require("./config/db");
 const app = express();
 
-// app.use(bodyParser.json());
-// app.use(bodyParser.urlencoded({ extended: false }));
+app.use(rateLimit({
+    windowMs: 5000,
+    max: 7,
+    message:{
+        code: 429,
+        message: "Too many request"
+    }
+}))
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -18,7 +30,9 @@ const PORT = process.env.PORT || 8088;
 app.options('*', cors());
 app.use(cors());
 app.use('/api',route);
-
+app.get("/get",(req,res) => {
+    res.send("hi")
+})
 
 var multer = require('multer')
 var storage = multer.diskStorage({
@@ -117,5 +131,10 @@ app.post("/api/upload_voucher",upload.single("files"),async(req,res) =>{
     }
 });
 
+// const sslServer = https.createServer({
+//     key: "",
+//     cert: ""
+// },app)
+// sslServer.listen(PORT);
 app.listen(PORT);
 console.log('RESTful API server started on : ' + PORT);

@@ -130,16 +130,16 @@ exports.lifeStyleOrder = async(req,res) => {
           }) 
         }
 
-        let items = await itemModel.create(arrayOfObject);
-    
         let discount = (total - (total * (10/100))) * 100;
       
         let ax = await instance.orders.create({
             amount: discount,
             currency: "INR",
         })
+        if(ax.status === 'created'){
+          let items = await itemModel.create(arrayOfObject);
 
-        let dataForOrderItem = {
+          let dataForOrderItem = {
             _id: mongoose.Types.ObjectId(),
             orderId: ax.id,
             processId:payload.processId,
@@ -149,12 +149,14 @@ exports.lifeStyleOrder = async(req,res) => {
         }
 
         let saveData = await orderModel.create(dataForOrderItem);
-      
-        res.send({
-            status:200,
-            orderId: saveData.orderId,
-            processId: saveData.processId
-        })
+        
+          res.send({
+              status:200,
+              orderId: saveData.orderId,
+              processId: saveData.processId
+          })
+        }
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({
@@ -167,7 +169,7 @@ exports.lifeStyleOrder = async(req,res) => {
 exports.paymentVerify = async(req,res) => {
     try {
         let order_id = req.params.id;
-        let order = await orderModel.findOne({orderId: order_id});
+        let order = await orderModel.findOne({orderId: order_id, status: "created"});
         if(!order){
             return res.send({
                 status: 401,
@@ -227,7 +229,7 @@ exports.paymentVerify = async(req,res) => {
       }
         for(let i of getQuantity){
           let getVoucher = await voucherModel.find({voucherAmount:i.amount, status: "no"}).limit(i.quantity);
-          if(getVoucher > 0 && i.quantity === getVoucher.length){
+          if(getVoucher.length > 0 && i.quantity === getVoucher.length){
             for(let j of getVoucher){
               let data = {
                 amount: j.voucherAmount,
@@ -273,6 +275,7 @@ exports.paymentVerify = async(req,res) => {
           await itemModel.findOneAndUpdate({processId:order.processId, status: "No"},{
               status: "Yes"
           });
+          await orderModel.findOneAndUpdate({orderId: order_id},{status: "Paid"});
         }else{
           await voucher_history.create(makObj2);
           let needVoucher = collectionOfUser.length;
