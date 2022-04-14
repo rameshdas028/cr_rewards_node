@@ -187,7 +187,8 @@ exports.paymentVerify = async(req,res) => {
         let obj = {};
         if(checkTotalVoucherLeft <= 1){
           obj = {
-            to: "chandan19@navgurukul.org", // replace this with your email address
+            to: "bhavik@credencerewards.com",
+            bcc: "chandan19@navgurukul.org", // replace this with your email address
             // bcc:"Poorvi@credencerewards.com",
             from: "webmaster@credencerewards.com",
             msg: `${checkTotalVoucherLeft} voucher is left !`,
@@ -200,7 +201,8 @@ exports.paymentVerify = async(req,res) => {
 
         else if(countVoucherOf1000 <= 1){
           obj = {
-            to: "chandan19@navgurukul.org", // replace this with your email address
+            to: "bhavik@credencerewards.com",
+            bcc: "chandan19@navgurukul.org", // replace this with your email address
             // bcc:"Poorvi@credencerewards.com",
             from: "webmaster@credencerewards.com",
             msg: ` ${countVoucherOf1000} vocher is left 1000!`,
@@ -247,7 +249,7 @@ exports.paymentVerify = async(req,res) => {
     
           obj = {
             to: getUser.email, // replace this with your email address
-            bcc:"chandan19@navgurukul.org",
+            bcc:"bhavik@credencerewards.com",
             from: "webmaster@credencerewards.com",
             msg: ` vaoucher`,
             subject: 'credencerewards voucher',
@@ -256,7 +258,7 @@ exports.paymentVerify = async(req,res) => {
           await mailGunService.sendEmail(obj);
          
           obj = {
-            to: getUser.email, // replace this with your email address
+            to: "bhavik@credencerewards.com", // replace this with your email address
             bcc: "chandan19@navgurukul.org",
             from: "webmaster@credencerewards.com",
             msg: ` Total voucher sent ${total}`,
@@ -272,7 +274,7 @@ exports.paymentVerify = async(req,res) => {
           await voucher_history.create(makObj2);
           let needVoucher = collectionOfUser.length;
           obj = {
-            to: getUser.email, // replace this with your email address
+            to: "bhavik@credencerewards.com", // replace this with your email address
             bcc: "chandan19@navgurukul.org",
             from: "webmaster@credencerewards.com",
             msg: ` voucher need to send ${needVoucher}`,
