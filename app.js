@@ -2,16 +2,18 @@ const dotenv = require("dotenv");
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const express = require("express");
+const fs = require('fs');
 dotenv.config();
 const route = require("./routes/indexRoute");
 const db = require("./config/db");
 const app = express();
+
 // app.use(bodyParser.json());
 // app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-const PORT = process.env.PORT || 80;
+const PORT = process.env.PORT || 8088;
 
 app.options('*', cors());
 app.use(cors());
@@ -79,9 +81,6 @@ app.use(
     }
 );
 
-// 
-const csv = require('csv-parser')
-const fs = require('fs')
 const voucherModel = require("./models/voucherModel");
 
 app.post("/api/upload", upload.single("files"),(req,res) =>{
@@ -106,11 +105,9 @@ app.post("/api/upload_voucher",upload.single("files"),async(req,res) =>{
           const sheetnams = sheet[i];
           sheetData = reader.utils.sheet_to_json(readfile.Sheets[sheetnams]);
         }
-        // for(let i = 0; i< sheetData.length; i++){
-        //     console.log(sheetData[i]);
-        // }
-        // // console.log(sheetData);
         await voucherModel.create(sheetData);
+        fs.unlinkSync('format.xls');
+        console.log('File deleted!');
         return res.send({
             status:200,
             message: "success fully upload",
