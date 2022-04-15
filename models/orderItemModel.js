@@ -26,9 +26,9 @@ const schema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    status:{
-        type: String,
-        default : "No"
+    voucher_sent_status:{
+        type: Boolean,
+        default : false
     }
 }, {
     strict: false,
