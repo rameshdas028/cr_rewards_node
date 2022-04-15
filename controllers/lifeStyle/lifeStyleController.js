@@ -180,7 +180,8 @@ exports.paymentVerify = async(req,res) => {
         // var instance = new Razorpay({ key_id: 'YOUR_KEY_ID', key_secret: 'YOUR_SECRET' })
 
         let checkPyament = instance.orders.fetch(order_id);
-        if(checkPyament.status.toLowerCase() === "paid"){
+        console.log(checkPyament,"check payment");
+        if((checkPyament.status).toLowerCase() === "paid"){
           let getUser = await lifeStyleModel.findOne({_id:order.processId});
           let getQuantity = await itemModel.find({processId:order.processId, status: "No"});
     
@@ -304,7 +305,7 @@ exports.paymentVerify = async(req,res) => {
           });
         }else{
           return res.send({
-            status: 200,
+            status: 401,
             message: "payment not done!"
           });
         }
