@@ -315,7 +315,7 @@ exports.sendText = async(data) => {
     try {
       let msg;
       for(let i of data.details){
-          msg = ` This is your Lifestyle voucher of value INR Amount  ${i.amount}  Voucher Code  ${i.code}  Voucher pin  ${i.pin} Expire Date  ${i.expire}`
+          msg = ` This is your Lifestyle voucher of value INR Amount:  ${i.amount}  Voucher Code:  ${i.code}  Voucher pin:  ${i.pin} Expiry Date:  ${i.expire}`
           let obj = {
             countryCode: '+91',
             mobileNumber: `${data.mobile}`,
