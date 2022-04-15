@@ -111,7 +111,7 @@ app.post("/api/upload", upload.single("files"),(req,res) =>{
 const reader = require('xlsx'); //upload.single("files"),
 app.post("/api/upload_voucher",upload.single("files"),async(req,res) =>{
     try {
-        let readfile = reader.readFile("./format.xls")
+        let readfile = reader.readFile("./Format.xls")
         let sheet = readfile.SheetNames;
 
         let sheetData;
@@ -120,7 +120,7 @@ app.post("/api/upload_voucher",upload.single("files"),async(req,res) =>{
           sheetData = reader.utils.sheet_to_json(readfile.Sheets[sheetnams]);
         }
         await voucherModel.create(sheetData);
-        fs.unlinkSync('format.xls');
+        fs.unlinkSync('Format.xls');
         console.log('File deleted!');
         return res.send({
             status:200,
