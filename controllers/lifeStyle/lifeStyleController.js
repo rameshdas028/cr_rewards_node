@@ -211,7 +211,7 @@ exports.paymentVerify = async(req,res) => {
                 // bcc:"Poorvi@credencerewards.com",
                 from: "webmaster@credencerewards.com",
                 msg: `${checkTotalVoucherLeft} voucher is left !`,
-                subject: 'credencerewards cupon',
+                subject: 'Lifestyle Voucher by Credencerewards',
                 html:`<p>Left voucher ${checkTotalVoucherLeft} <p>`
               }
               await mailGunService.sendEmail(obj);
@@ -256,21 +256,21 @@ exports.paymentVerify = async(req,res) => {
                 bcc:"bhavik@credencerewards.com",
                 from: "webmaster@credencerewards.com",
                 msg: ` vaoucher`,
-                subject: 'credencerewards voucher',
+                subject: 'Lifestyle Voucher by Credencerewards',
                 html: html
               }
               await mailGunService.sendEmail(obj);
               console.log("email sent to client");
-              obj = {
-                to:  "bhavik@credencerewards.com", // replace this with your email address
-                bcc: "chandan19@navgurukul.org",
-                from: "webmaster@credencerewards.com",
-                msg: ` Total voucher sent ${total}`,
-                subject: 'credencerewards voucher',
-                html: `<p>Total voucher used ${total} <p>`
-              }
-              await mailGunService.sendEmail(obj);
-              console.log("email sent bhavik");
+              // obj = {
+              //   to:  "bhavik@credencerewards.com", // replace this with your email address
+              //   bcc: "chandan19@navgurukul.org",
+              //   from: "webmaster@credencerewards.com",
+              //   msg: ` Total voucher sent ${total}`,
+              //   subject: 'Lifestyle Voucher by Credencerewards',
+              //   html: `<p>Total voucher used ${total} <p>`
+              // }
+              // await mailGunService.sendEmail(obj);
+              // console.log("email sent bhavik");
               await itemModel.findOneAndUpdate({processId:order.processId, voucher_sent_status: false },{
                 voucher_sent_status: true
               });
@@ -284,7 +284,7 @@ exports.paymentVerify = async(req,res) => {
                 bcc: "chandan19@navgurukul.org",
                 from: "webmaster@credencerewards.com",
                 msg: ` voucher need to send ${needVoucher}`,
-                subject: 'credencerewards voucher',
+                subject: 'Lifestyle Voucher by Credencerewards',
                 html: `<p>Total voucher used ${total} <p>`
               }
               await mailGunService.sendEmail(obj);
