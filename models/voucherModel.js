@@ -10,11 +10,12 @@ const schema = new mongoose.Schema({
     voucherCode:{
         type: String,
         required: true,
+        unique:true
     },
     pin:{
         type: String,
         required: true,
-        unique:true
+        // unique:true
     },
 	expireDate: {
         type: String,
@@ -33,4 +34,4 @@ const schema = new mongoose.Schema({
 
 
 
-module.exports = mongoose.model("voucher", schema);
+module.exports = mongoose.model("voucherCode", schema);
