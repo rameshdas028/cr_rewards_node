@@ -177,7 +177,7 @@ exports.paymentVerify = async(req,res) => {
                 message: "invalid"
             })
         }
-
+        let getUser = await lifeStyleModel.findOne({_id:order.processId});
         let checkPyament = await instance.orders.fetch(order_id);
         console.log(checkPyament,"check payment");
         if((checkPyament.status).toLowerCase() === "paid"){
@@ -196,7 +196,6 @@ exports.paymentVerify = async(req,res) => {
               message: "successfull"
             });
           }else{
-            let getUser = await lifeStyleModel.findOne({_id:order.processId});
             let getQuantity = await itemModel.find({processId:order.processId, voucher_sent_status: false});
             let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
               // console.log(checkTotalVoucherLeft);
