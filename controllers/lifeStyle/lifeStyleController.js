@@ -196,27 +196,7 @@ exports.paymentVerify = async(req,res) => {
               message: "successfull"
             });
           }else{
-            let getQuantity = await itemModel.find({processId:order.processId, voucher_sent_status: false});
-            let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
-              // console.log(checkTotalVoucherLeft);
-            // let countVoucherOf1000 = await voucherModel.find({voucherAmount:1000,status:"no"}).count();
-              // console.log(countVoucherOf1000);
-            // let countVoucherOf2000 = await voucherModel.find({voucherAmount:2000,status:"no"}).count();
-      
-  
-            if(checkTotalVoucherLeft <= 1){
-              obj = {
-                to: "bhavik@credencerewards.com",
-                bcc: "chandan19@navgurukul.org", // replace this with your email address
-                // bcc:"Poorvi@credencerewards.com",
-                from: "webmaster@credencerewards.com",
-                msg: `${checkTotalVoucherLeft} voucher is left !`,
-                subject: 'Lifestyle Voucher by Credencerewards',
-                html:`<p>Left voucher ${checkTotalVoucherLeft} <p>`
-              }
-              await mailGunService.sendEmail(obj);
-              console.log("email sent");
-            } 
+            let getQuantity = await itemModel.find({processId:order.processId, voucher_sent_status: false});          
             let dataOfVoucher = [];
             let collectionOfUser = [];
             let makObj2 = {
@@ -261,22 +241,36 @@ exports.paymentVerify = async(req,res) => {
               }
               await mailGunService.sendEmail(obj);
               console.log("email sent to client");
-              // obj = {
-              //   to:  "bhavik@credencerewards.com", // replace this with your email address
-              //   bcc: "chandan19@navgurukul.org",
-              //   from: "webmaster@credencerewards.com",
-              //   msg: ` Total voucher sent ${total}`,
-              //   subject: 'Lifestyle Voucher by Credencerewards',
-              //   html: `<p>Total voucher used ${total} <p>`
-              // }
-              // await mailGunService.sendEmail(obj);
-              // console.log("email sent bhavik");
+
+              let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
+              // console.log(checkTotalVoucherLeft);
+            // let countVoucherOf1000 = await voucherModel.find({voucherAmount:1000,status:"no"}).count();
+              // console.log(countVoucherOf1000);
+            // let countVoucherOf2000 = await voucherModel.find({voucherAmount:2000,status:"no"}).count();
+      
+              obj = {
+                to: "bhavik@credencerewards.com",
+                bcc: "chandan19@navgurukul.org", // replace this with your email address
+                from: "webmaster@credencerewards.com",
+                msg: `voucher left !`,
+                subject: 'Lifestyle Voucher by Credencerewards',
+                html:`<p>Left voucher ${checkTotalVoucherLeft} <p>`
+              }
+              await mailGunService.sendEmail(obj);
+              console.log("email sent");
               await itemModel.findOneAndUpdate({processId:order.processId, voucher_sent_status: false },{
                 voucher_sent_status: true
               });
-              await orderModel.findOneAndUpdate({orderId: order_id},{status: "Paid"});
+              await orderModel.findOneAndUpdate({orderId: order_id},{
+                status: "Paid",
+                isDeledeliveredItem: true,
+                vouchers: makObj.details
+              });
               await this.sendText(messageObj);
             }else{
+              await orderModel.findOneAndUpdate({orderId: order_id},{
+                status: "Paid",
+              });
               await voucher_history.create(makObj2);
               let needVoucher = collectionOfUser.length;
               obj = {

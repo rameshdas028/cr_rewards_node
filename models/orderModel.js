@@ -31,6 +31,13 @@ const schema = new mongoose.Schema({
         trim: true,
         type: String,
     },
+    vouchers:{
+        type: Schema.Types.Mixed
+    },
+    isDeledeliveredItem:{
+        type: Boolean,
+        default: false
+    },
     signature:{
         desc: "signature",
         trim: true,
