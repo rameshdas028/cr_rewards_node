@@ -34,7 +34,7 @@ const schema = new mongoose.Schema({
     vouchers:{
         type: Schema.Types.Mixed
     },
-    isDeledeliveredItem:{
+    isdeliveredItem:{
         type: Boolean,
         default: false
     },
