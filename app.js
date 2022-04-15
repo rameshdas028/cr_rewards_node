@@ -25,7 +25,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-const PORT = process.env.PORT || 2053;
+const PORT = process.env.PORT || 8080;
 
 app.options('*', cors());
 app.use(cors());

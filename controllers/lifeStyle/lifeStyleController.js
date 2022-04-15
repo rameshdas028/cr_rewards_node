@@ -130,7 +130,7 @@ exports.lifeStyleOrder = async(req,res) => {
           }) 
         }
 
-        let discount = (total - (total * (10/100))) * 100;
+        let discount = (total - (total * (10/100)));
       
         let ax = await instance.orders.create({
             amount: discount,
@@ -144,7 +144,7 @@ exports.lifeStyleOrder = async(req,res) => {
             orderId: ax.id,
             processId:payload.processId,
             orderItem : ids,
-            discount: discount,
+            discount: (discount / 100),
             status: ax.status
         }
 
