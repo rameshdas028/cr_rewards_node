@@ -177,127 +177,137 @@ exports.paymentVerify = async(req,res) => {
             })
         }
   
-        let getUser = await lifeStyleModel.findOne({_id:order.processId});
-        let getQuantity = await itemModel.find({processId:order.processId, status: "No"});
-  
-        let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
-          // console.log(checkTotalVoucherLeft);
-        let countVoucherOf1000 = await voucherModel.find({voucherAmount:1000,status:"no"}).count();
-          // console.log(countVoucherOf1000);
-        // let countVoucherOf2000 = await voucherModel.find({voucherAmount:2000,status:"no"}).count();
-  
-        let obj = {};
-        if(checkTotalVoucherLeft <= 1){
-          obj = {
-            to: "chandan19@navgurukul.org",
-            // "bhavik@credencerewards.com",
-            // bcc: "chandan19@navgurukul.org", // replace this with your email address
-            // bcc:"Poorvi@credencerewards.com",
-            from: "webmaster@credencerewards.com",
-            msg: `${checkTotalVoucherLeft} voucher is left !`,
-            subject: 'credencerewards cupon',
-            html:`<p><p>`
-          }
-          await mailGunService.sendEmail(obj);
-          console.log("email sent");
-        }
+        // var instance = new Razorpay({ key_id: 'YOUR_KEY_ID', key_secret: 'YOUR_SECRET' })
 
-        else if(countVoucherOf1000 <= 1){
-          obj = {
-            to: "chandan19@navgurukul.org",
-            // "bhavik@credencerewards.com",
-            // bcc: "chandan19@navgurukul.org", // replace this with your email address
-            // bcc:"Poorvi@credencerewards.com",
-            from: "webmaster@credencerewards.com",
-            msg: ` ${countVoucherOf1000} vocher is left 1000!`,
-            subject: 'credencerewards cupon',
-            html:`<p><p>`
-          }
-          await mailGunService.sendEmail(obj);
-        }           
-
-      let dataOfVoucher = [];
-      let collectionOfUser = [];
-      let makObj2 = {
-        name: getUser.name
-      };
-      let makObj = {
-          name: getUser.name
-      }
-      let messageObj = {
-        mobile: getUser.mobile
-      }
-        for(let i of getQuantity){
-          let getVoucher = await voucherModel.find({voucherAmount:i.amount, status: "no"}).limit(i.quantity);
-          if(getVoucher.length > 0 && i.quantity === getVoucher.length){
-            for(let j of getVoucher){
-              let data = {
-                amount: j.voucherAmount,
-                code: j.voucherCode,
-                pin: j.pin,
-                expire: j.expireDate
-              }
-              await voucherModel.findByIdAndUpdate({_id:j._id},{status:"used"});
-              dataOfVoucher.push(data);
-            }
-          }
-          collectionOfUser.push(i);
-        }
-        makObj.details = dataOfVoucher
-        messageObj.details = dataOfVoucher;
-        makObj2.details = collectionOfUser;
-        let checkTotalSent = await voucherModel.find({status:"used"}).count()
-        let total =  checkTotalVoucherLeft - checkTotalSent;
-        if(makObj.details.length >= 1){
-          let html = await invoiceMailTemplate.sendEmailToCustomer(makObj);
+        let checkPyament = instance.orders.fetch(order_id);
+        if(checkPyament.status.toLowerCase() === "paid"){
+          let getUser = await lifeStyleModel.findOne({_id:order.processId});
+          let getQuantity = await itemModel.find({processId:order.processId, status: "No"});
     
-          obj = {
-            to: getUser.email, // replace this with your email address
-            // bcc:"bhavik@credencerewards.com",
-            from: "webmaster@credencerewards.com",
-            msg: ` vaoucher`,
-            subject: 'credencerewards voucher',
-            html: html
+          let checkTotalVoucherLeft = await voucherModel.find({status:"no"}).count()
+            // console.log(checkTotalVoucherLeft);
+          let countVoucherOf1000 = await voucherModel.find({voucherAmount:1000,status:"no"}).count();
+            // console.log(countVoucherOf1000);
+          // let countVoucherOf2000 = await voucherModel.find({voucherAmount:2000,status:"no"}).count();
+    
+          let obj = {};
+          if(checkTotalVoucherLeft <= 1){
+            obj = {
+              to: "chandan19@navgurukul.org",
+              // "bhavik@credencerewards.com",
+              // bcc: "chandan19@navgurukul.org", // replace this with your email address
+              // bcc:"Poorvi@credencerewards.com",
+              from: "webmaster@credencerewards.com",
+              msg: `${checkTotalVoucherLeft} voucher is left !`,
+              subject: 'credencerewards cupon',
+              html:`<p><p>`
+            }
+            await mailGunService.sendEmail(obj);
+            console.log("email sent");
           }
-          await mailGunService.sendEmail(obj);
-         
-          obj = {
-            to:  "chandan19@navgurukul.org",
-            // "bhavik@credencerewards.com", // replace this with your email address
-            // bcc: "chandan19@navgurukul.org",
-            from: "webmaster@credencerewards.com",
-            msg: ` Total voucher sent ${total}`,
-            subject: 'credencerewards voucher',
-            html: `<p>Total voucher used ${total} <p>`
+  
+          else if(countVoucherOf1000 <= 1){
+            obj = {
+              to: "chandan19@navgurukul.org",
+              // "bhavik@credencerewards.com",
+              // bcc: "chandan19@navgurukul.org", // replace this with your email address
+              // bcc:"Poorvi@credencerewards.com",
+              from: "webmaster@credencerewards.com",
+              msg: ` ${countVoucherOf1000} vocher is left 1000!`,
+              subject: 'credencerewards cupon',
+              html:`<p><p>`
+            }
+            await mailGunService.sendEmail(obj);
+          }           
+  
+        let dataOfVoucher = [];
+        let collectionOfUser = [];
+        let makObj2 = {
+          name: getUser.name
+        };
+        let makObj = {
+            name: getUser.name
+        }
+        let messageObj = {
+          mobile: getUser.mobile
+        }
+          for(let i of getQuantity){
+            let getVoucher = await voucherModel.find({voucherAmount:i.amount, status: "no"}).limit(i.quantity);
+            if(getVoucher.length > 0 && i.quantity === getVoucher.length){
+              for(let j of getVoucher){
+                let data = {
+                  amount: j.voucherAmount,
+                  code: j.voucherCode,
+                  pin: j.pin,
+                  expire: j.expireDate
+                }
+                await voucherModel.findByIdAndUpdate({_id:j._id},{status:"used"});
+                dataOfVoucher.push(data);
+              }
+            }
+            collectionOfUser.push(i);
           }
-          await mailGunService.sendEmail(obj);
-          await this.sendText(messageObj);
-          await itemModel.findOneAndUpdate({processId:order.processId, status: "No"},{
-              status: "Yes"
+          makObj.details = dataOfVoucher
+          messageObj.details = dataOfVoucher;
+          makObj2.details = collectionOfUser;
+          let checkTotalSent = await voucherModel.find({status:"used"}).count()
+          let total =  checkTotalVoucherLeft - checkTotalSent;
+          if(makObj.details.length >= 1){
+            let html = await invoiceMailTemplate.sendEmailToCustomer(makObj);
+      
+            obj = {
+              to: getUser.email, // replace this with your email address
+              // bcc:"bhavik@credencerewards.com",
+              from: "webmaster@credencerewards.com",
+              msg: ` vaoucher`,
+              subject: 'credencerewards voucher',
+              html: html
+            }
+            await mailGunService.sendEmail(obj);
+           
+            obj = {
+              to:  "chandan19@navgurukul.org",
+              // "bhavik@credencerewards.com", // replace this with your email address
+              // bcc: "chandan19@navgurukul.org",
+              from: "webmaster@credencerewards.com",
+              msg: ` Total voucher sent ${total}`,
+              subject: 'credencerewards voucher',
+              html: `<p>Total voucher used ${total} <p>`
+            }
+            await mailGunService.sendEmail(obj);
+            await this.sendText(messageObj);
+            await itemModel.findOneAndUpdate({processId:order.processId, status: "No"},{
+                status: "Yes"
+            });
+            await orderModel.findOneAndUpdate({orderId: order_id},{status: "Paid"});
+          }else{
+            await voucher_history.create(makObj2);
+            let needVoucher = collectionOfUser.length;
+            obj = {
+              to:  "chandan19@navgurukul.org",
+              // "bhavik@credencerewards.com", // replace this with your email address
+              // bcc: "chandan19@navgurukul.org",
+              from: "webmaster@credencerewards.com",
+              msg: ` voucher need to send ${needVoucher}`,
+              subject: 'credencerewards voucher',
+              html: `<p>Total voucher used ${total} <p>`
+            }
+            await mailGunService.sendEmail(obj);
+            await itemModel.findOneAndUpdate({processId:order.processId, status: "No"},{
+              status: "Pending"
+            });
+          }
+  
+          return res.send({
+            status: checkPyament.status,
+            message: "successfull"
           });
-          await orderModel.findOneAndUpdate({orderId: order_id},{status: "Paid"});
         }else{
-          await voucher_history.create(makObj2);
-          let needVoucher = collectionOfUser.length;
-          obj = {
-            to:  "chandan19@navgurukul.org",
-            // "bhavik@credencerewards.com", // replace this with your email address
-            // bcc: "chandan19@navgurukul.org",
-            from: "webmaster@credencerewards.com",
-            msg: ` voucher need to send ${needVoucher}`,
-            subject: 'credencerewards voucher',
-            html: `<p>Total voucher used ${total} <p>`
-          }
-          await mailGunService.sendEmail(obj);
-          await itemModel.findOneAndUpdate({processId:order.processId, status: "No"},{
-            status: "Pending"
+          return res.send({
+            status: 200,
+            message: "payment not done!"
           });
         }
-
-        return res.send({
-          status: 200,
-          message: "successfull"
-        });
     } catch (error) {
         console.log(error);
         return res.status(500).json({
