@@ -15,7 +15,6 @@ const schema = new mongoose.Schema({
     pin:{
         type: String,
         required: true,
-        // unique:true
     },
 	expireDate: {
         type: String,
